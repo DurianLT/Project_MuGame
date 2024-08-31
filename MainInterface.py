@@ -15,7 +15,7 @@ GRAY = (169, 169, 169)
 BLACK = (0, 0, 0)
 
 # 加载支持中文的字体
-font = pygame.font.Font("font/HYPixel11pxJ-2.ttf", 24)
+pixelFont24 = pygame.font.Font("font/HYPixel11pxJ-2.ttf", 24)
 
 # 按钮类
 class Button:
@@ -32,7 +32,7 @@ class Button:
         surface.fill(color_with_opacity)
         screen.blit(surface, self.rect.topleft)
 
-        text_surf = font.render(self.text, True, WHITE)
+        text_surf = pixelFont24.render(self.text, True, WHITE)
         text_surf.set_alpha(self.opacity)
         text_rect = text_surf.get_rect(center=self.rect.center)
         screen.blit(text_surf, text_rect)
@@ -50,7 +50,7 @@ class MainScreen:
 
     def draw(self, screen):
         screen.fill(BLACK)  # 使用黑色背景代替背景图片
-        title_surf = font.render("音乐游戏", True, WHITE)
+        title_surf = pixelFont24.render("音乐游戏", True, WHITE)
         screen.blit(title_surf, (screen_width // 2 - title_surf.get_width() // 2, 50))
         for button in self.buttons:
             button.draw(screen)
