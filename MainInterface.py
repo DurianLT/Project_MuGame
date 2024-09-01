@@ -52,6 +52,29 @@ class Button:
     def is_clicked(self, event):
         return self.rect.collidepoint(event.pos)
 
+# 键盘按钮类 KeyButton
+class KeyButton:
+    def __init__(self, key, lane, x, y, width, height):
+        self.key = key
+        self.lane = lane
+        self.rect = pygame.Rect(x, y, width, height)
+        self.is_pressed = False
+        self.color_default = WHITE
+        self.color_pressed = GRAY
+
+    def draw(self, screen):
+        color = self.color_pressed if self.is_pressed else self.color_default
+        pygame.draw.rect(screen, color, self.rect)
+
+        key_surf = pixelFont24.render(self.key, True, BLACK)
+        key_rect = key_surf.get_rect(center=self.rect.center)
+        screen.blit(key_surf, key_rect)
+
+    def press(self):
+        self.is_pressed = True
+
+    def release(self):
+        self.is_pressed = False
 
 ##################################################################################################################################
 # 精灵类
@@ -175,6 +198,13 @@ class GameScreen:
         self.notes = []  # 用于存储生成的note
         self.judgment_line_y = HEIGHT - 50
 
+        self.key_buttons = {
+            pygame.K_a: KeyButton("A", 0, WIDTH // 8 - 50, HEIGHT - 40, 100, 40),
+            pygame.K_s: KeyButton("S", 1, WIDTH // 8 * 3 - 50, HEIGHT - 40, 100, 40),
+            pygame.K_k: KeyButton("K", 2, WIDTH // 8 * 5 - 50, HEIGHT - 40, 100, 40),
+            pygame.K_l: KeyButton("L", 3, WIDTH // 8 * 7 - 50, HEIGHT - 40, 100, 40)
+        }
+
         # 生成测试数据
         self.load_level_data()
 
@@ -234,17 +264,21 @@ class GameScreen:
 
     def draw(self, screen):
         screen.fill(BLACK)
+        # 绘制音符
+        for note in self.notes:
+            note.draw(screen)
+        # Draw key buttons
+        for key_button in self.key_buttons.values():
+            key_button.draw(screen)
 
         # 绘制滑道分界线
         for i in range(1, 5):
             pygame.draw.line(screen, WHITE, (i * WIDTH // 4, 0), (i * WIDTH // 4, HEIGHT-50), 2)
 
         # 绘制判定线
-        pygame.draw.line(screen, WHITE, (0, self.judgment_line_y), (WIDTH, self.judgment_line_y), 2)
+        pygame.draw.line(screen, WHITE, (0, self.judgment_line_y), (WIDTH, self.judgment_line_y), 5)
 
-        # 绘制音符
-        for note in self.notes:
-            note.draw(screen)
+        
 
         # 绘制屏幕边界和信息
         pygame.draw.rect(screen, BLACK, (0, 0, WIDTH, 50))  # 顶部空白区域
@@ -277,6 +311,15 @@ class GameScreen:
                 button.draw(screen)
 
     def handle_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key in self.key_buttons:
+                self.key_buttons[event.key].press()
+                print(f"Key {pygame.key.name(event.key).upper()} pressed")  # 打印按下的按键
+
+        elif event.type == pygame.KEYUP:
+            if event.key in self.key_buttons:
+                self.key_buttons[event.key].release()
+                print(f"Key {pygame.key.name(event.key).upper()} released")  # 打印松开的按键
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.paused:
                 if self.pause_menu["return"].is_clicked(event):
@@ -314,7 +357,6 @@ game_screen = None
 current_screen = "main"
 
 running = True
-
 while running:
     delta_time = clock.tick(FPS) / 1000  # 时间差，单位为秒
 
@@ -324,34 +366,39 @@ while running:
             pygame.quit()
             sys.exit()
 
-        if current_screen == "game" and game_screen.paused:
-            # 在暂停状态时不处理事件
-            pygame.time.wait(100)  # 暂停 100ms，确保游戏状态冻结
+        # 根据当前界面处理事件
+        if current_screen == "main":
+            screen_switch = main_screen.handle_event(event)
+            if screen_switch:
+                current_screen = screen_switch
 
+        elif current_screen == "level_select":
+            result = level_select_screen.handle_event(event)
+            if result:
+                if isinstance(result, tuple):
+                    current_screen, level_name = result
+                    game_screen = GameScreen(level_name)
+                else:
+                    current_screen = result
+
+        elif current_screen == "game":
+            result = game_screen.handle_event(event)
+            if result:
+                current_screen = result
+
+    # 更新并绘制当前屏幕
     if current_screen == "main":
         main_screen.draw(screen)
-        screen_switch = main_screen.handle_event(event)
-        if screen_switch:
-            current_screen = screen_switch
 
     elif current_screen == "level_select":
         level_select_screen.draw(screen)
-        result = level_select_screen.handle_event(event)
-        if result:
-            if isinstance(result, tuple):
-                current_screen, level_name = result
-                game_screen = GameScreen(level_name)
-            else:
-                current_screen = result
 
     elif current_screen == "game":
         if not game_screen.paused:
             game_screen.update_notes(delta_time)
         game_screen.draw(screen)
-        result = game_screen.handle_event(event)
-        if result:
-            current_screen = result
 
     pygame.display.flip()
 
 pygame.quit()
+
