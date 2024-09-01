@@ -107,8 +107,6 @@ class Note:
     def is_on_judgment_line(self):
         return HEIGHT - 50 <= self.y + self.height <= HEIGHT - 40
 
-
-
 ##################################################################################################################################
 # 界面类
 ##################################################################################################################################
@@ -138,7 +136,6 @@ class MainScreen:
             elif self.settings_button.is_clicked(event):
                 return "settings"
         return None
-
 
 # 关卡选择界面类
 class LevelSelectScreen:
@@ -186,7 +183,6 @@ class LevelSelectScreen:
                 self.scroll(1)
         return None
 
-
 # 游戏界面类
 class GameScreen:
     def __init__(self, level_name):
@@ -197,6 +193,7 @@ class GameScreen:
         self.paused = False
         self.notes = []  # 用于存储生成的note
         self.judgment_line_y = HEIGHT - 50
+        self.score = 0
 
         self.key_buttons = {
             pygame.K_a: KeyButton("A", 0, WIDTH // 8 - 50, HEIGHT - 40, 100, 40),
@@ -214,6 +211,25 @@ class GameScreen:
             "return": Button("返回", WIDTH // 2 - 150, HEIGHT // 2, 140, 40, GRAY),
             "settings": Button("设置", WIDTH // 2 - 150, HEIGHT // 2 + 60, 140, 40, GRAY)
         }
+
+    def calculate_score(self, key):
+        for note in self.notes:
+            if note.is_on_judgment_line() and note.lane == self.key_buttons[key].lane:
+                distance = abs(note.y + note.height - self.judgment_line_y)
+                if distance < 10:  # Perfect
+                    self.score += 100
+                    print("Perfect!")
+                elif distance < 20:  # Great
+                    self.score += 50
+                    print("Great!")
+                elif distance < 30:  # Bad
+                    self.score += 10
+                    print("Bad!")
+                self.notes.remove(note)
+                return
+        print("Miss!")
+
+
     # 修正后的时间解析方法
     def parse_time(self, time_str):
         # 拆分分钟、秒、毫秒
@@ -241,7 +257,7 @@ class GameScreen:
 
             print(f"解析到音符 {line.strip()} 滑道 {lane} 开始时间 {start_time} 结束时间 {end_time}")
 
-            color = BLUE if note_type == "NOTE" else YELLOW if note_type == "HOLD" else WHITE  # 根据类型选择颜色
+            color = BLUE if note_type == "NOTE" else BLUE if note_type == "HOLD" else YELLOW  # 根据类型选择颜色
             # 使用绝对时间（相对于游戏开始时间）
             self.notes.append(Note(lane, color, start_time, end_time))
 
@@ -278,8 +294,6 @@ class GameScreen:
         # 绘制判定线
         pygame.draw.line(screen, WHITE, (0, self.judgment_line_y), (WIDTH, self.judgment_line_y), 5)
 
-        
-
         # 绘制屏幕边界和信息
         pygame.draw.rect(screen, BLACK, (0, 0, WIDTH, 50))  # 顶部空白区域
 
@@ -293,8 +307,9 @@ class GameScreen:
         screen.blit(time_surf, (WIDTH - time_surf.get_width() - 10, 10))
 
         # 显示分数（示例）
-        score_surf = pixelFont24.render("分数: 0", True, WHITE)
+        score_surf = pixelFont24.render(f"分数: {self.score}", True, WHITE)
         screen.blit(score_surf, (WIDTH - score_surf.get_width() - 10, 30))
+
 
         # 显示暂停按钮
         pause_button = Button("暂停", 10, 10, 100, 40, GRAY)
@@ -314,6 +329,7 @@ class GameScreen:
         if event.type == pygame.KEYDOWN:
             if event.key in self.key_buttons:
                 self.key_buttons[event.key].press()
+                self.calculate_score(event.key)
                 print(f"Key {pygame.key.name(event.key).upper()} pressed")  # 打印按下的按键
 
         elif event.type == pygame.KEYUP:
@@ -345,7 +361,6 @@ class GameScreen:
                     self.paused = True
                     self.paused_time = time.time()
         return None
-
 
 ##################################################################################################################################
 # 游戏主循环
